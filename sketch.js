@@ -1,24 +1,38 @@
+const USER = 1;
+const FOURIER = 2;
 let x = [];
 let y = [];
+let path = [];
+let drawing = [];
 let fourierX;
 let fourierY;
 let time = 0;
-let path = [];
-let circles, freq_slider;
-function setup() {
-  createCanvas(600, 400);
-  //Sliders to interact with the sketch
-  circles = createSlider(1, 15, 3, 1);
-  freq_slider = createSlider(1, 10, 1, 1);
-  let angle = 0;
-  for (let i = 0; i < 500; i++) {
-    angle = map(i,0,100,0,TWO_PI);
-    y[i] = 150*noise(angle);
-    x[i] = 150*noise(angle+100);
+let state = -1;
+
+function mousePressed() {
+  state = USER;
+  drawing = [];
+  x = [];
+  y = [];
+  path = [];
+  time = 0;
+}
+function mouseReleased() {
+  state = FOURIER;
+  const skip = 1;
+  for (let i = 0; i < drawing.length; i += skip) {
+    x.push(drawing[i].x);
+    y.push(drawing[i].y);
   }
   fourierX = dft(x);
   fourierY = dft(y);
-  console.log(fourierY);
+
+  fourierX.sort((a, b) => b.amp - a.amp);
+  fourierY.sort((a, b) => b.amp - a.amp);
+}
+
+function setup() {
+  createCanvas(800, 600);
 }
 function epiCycles(x, y, rotation, fourier) {
   for (let i = 0; i < fourier.length; i++) {
@@ -37,32 +51,47 @@ function epiCycles(x, y, rotation, fourier) {
     line(prevx, prevy, x, y);
   }
   return createVector(x, y);
-
 }
 function draw() {
   background(0);
 
-  let vx = epiCycles(400,50,0,fourierX);
-  let vy = epiCycles(50,250,HALF_PI,fourierY);
-  let v = createVector(vx.x,vy.y);
+  // User drawing
+  if (state == USER) {
+    let point = createVector(mouseX - width / 2, mouseY - height / 2);
+    drawing.push(point);
+    stroke(255);
+    noFill();
+    beginShape();
+    for (let v of drawing) {
+      vertex(v.x + width / 2, v.y + height / 2);
+    }
+    endShape();
 
-  path.unshift(v);
-  line(vx.x, vx.y, v.x,v.y);
-  line(vy.x, vy.y, v.x,v.y);
-  //translate(200, 0);
-  //line(x-200, y, 0, path[0]);
+    // Fourier processing the drawing
+  } else if (state == FOURIER) {
+    let vx = epiCycles(width / 2, 80, 0, fourierX);
+    let vy = epiCycles(100, height / 2, HALF_PI, fourierY);
+    let v = createVector(vx.x, vy.y);
 
-  beginShape();
-  noFill();
-  for (let i = 0; i < path.length; i++) {
-    vertex(path[i].x,path[i].y);
-  }
-  endShape();
+    path.unshift(v);
+    // Lines of the "pen"
+    line(vx.x, vx.y, v.x, v.y);
+    line(vy.x, vy.y, v.x, v.y);
 
-  const dt = TWO_PI / fourierY.length;
-  time += dt;
+    // The figure as a shape
+    beginShape();
+    noFill();
+    for (let i = 0; i < path.length; i++) {
+      vertex(path[i].x, path[i].y);
+    }
+    endShape();
 
-  while (path.length > 300) {
-    path.pop();
+    // Timer reset
+    const dt = TWO_PI / fourierY.length;
+    time += dt;
+    if (time > TWO_PI) {
+      time = 0;
+      path = [];
+    }
   }
 }
