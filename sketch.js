@@ -33,6 +33,7 @@ function mouseReleased() {
 
 function setup() {
   createCanvas(800, 600);
+  stroke(255, 100);
 }
 function epiCycles(x, y, rotation, fourier) {
   for (let i = 0; i < fourier.length; i++) {
@@ -54,6 +55,12 @@ function epiCycles(x, y, rotation, fourier) {
 }
 function draw() {
   background(0);
+  if (state == -1){
+    fill(255);
+    stroke(10);
+    textSize(32);
+    text('Draw something', x=width / 2-100, y=height / 2)
+  }
 
   // User drawing
   if (state == USER) {
